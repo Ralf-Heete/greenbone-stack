@@ -8,11 +8,11 @@ else
    echo "executed"
 fi   
 export script_name="$(basename ${0})"
-export project_dir="$(dirname ${0})"
+export project_dir="$(cd $(dirname ${0}) && pwd)"
 echo "project_dir=${project_dir}"
 
 # Defines the path to the Unix Socket
-SYSLOG_SOCKET="./volumes/syslog_socket_vol/socket"
+export SYSLOG_SOCKET="${project_dir}/volumes/syslog_socket_vol/socket"
 
 log_message() {
     local log_level=$1
