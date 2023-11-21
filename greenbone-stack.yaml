@@ -1,4 +1,22 @@
 services:
+  # Definiert den 'syslog'-Service, welcher für das zentrale Logging über einen Unix Socket verantwortlich ist
+  gb_syslog:
+    #user: syslog
+    # Nutzt das `rsyslog:latest` Image, welches aus dem Dockerfile im angegebenen Kontext erstellt wurde
+    image: rsyslog:latest
+    # Definiert den Hostnamen des Containers als 'syslog'
+    hostname: gb_syslog
+    # Weist dem Container den festen Namen 'syslog' zu, um ihn leicht identifizieren zu können
+    container_name: gb_syslog
+    environment:
+    - TZ=Europe/Berlin
+    # Bindet Host-Verzeichnisse (Volumen) an bestimmte Pfade im Container, um Persistenz und Datenfreigabe zu ermöglichen:
+    # - Das erste Volume bindet das Host-Verzeichnis für die Protokolldateien
+    volumes:
+    - ./volumes/syslog_vol:/var/log
+    # - Das zweite Volume bindet das Host-Verzeichnis, welches den Unix Socket für rsyslog enthält
+    - ./volumes/syslog_socket_vol:/run/rsyslog
+
   #################################################################################################################################
   # Definiert den 'vulnerability-tests'-Service, der scripte Daten für Schwachstellentests bereitstellt
   vulnerability-tests:
@@ -12,13 +30,13 @@ services:
     # Bindet ein Host-Verzeichnis (Volume) an einen spezifischen Pfad im Container
     # Dies ermöglicht den persistenten Speicher und den Zugriff auf Daten zwischen Container-Neustarts
     volumes:
-      - /docker/greenbone/volumes/vt_data_vol:/mnt
+      - ./volumes/vt_data_vol:/mnt
     # Konfiguriert das Logging für den Service, um alle Log-Nachrichten an den syslog-Service zu senden
     logging:
       driver: syslog
       options:
         # Gibt die Adresse des Unix-Sockets an, über den die Log-Nachrichten gesendet werden sollen
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         # Gibt einen spezifischen Tag für die Log-Nachrichten dieses Dienstes an
         tag: "vulnerability-tests"
 
@@ -34,13 +52,13 @@ services:
     # Bindet ein Host-Verzeichnis (Volume) an einen spezifischen Pfad im Container
     # Dies ermöglicht den persistenten Speicher und den Zugriff auf Daten zwischen Container-Neustarts
     volumes:
-      - /docker/greenbone/volumes/notus_data_vol:/mnt
+      - ./volumes/notus_data_vol:/mnt
     # Konfiguriert das Logging für den Service, um alle Log-Nachrichten an den syslog-Service zu senden
     logging:
       driver: syslog
       options:
         # Gibt die Adresse des Unix-Sockets an, über den die Log-Nachrichten gesendet werden sollen
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         # Gibt einen spezifischen Tag für die Log-Nachrichten dieses Dienstes an
         tag: "notus-data"
 
@@ -55,13 +73,13 @@ services:
     # Bindet ein Host-Verzeichnis (Volume) an einen spezifischen Pfad im Container
     # Dies ermöglicht den persistenten Speicher und den Zugriff auf Daten zwischen Container-Neustarts
     volumes:
-      - /docker/greenbone/volumes/scap_data_vol:/mnt
+      - ./volumes/scap_data_vol:/mnt
     # Konfiguriert das Logging für den Service, um alle Log-Nachrichten an den syslog-Service zu senden
     logging:
       driver: syslog
       options:
         # Gibt die Adresse des Unix-Sockets an, über den die Log-Nachrichten gesendet werden sollen
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         # Gibt einen spezifischen Tag für die Log-Nachrichten dieses Dienstes an
         tag: "scap-data"
 
@@ -77,12 +95,12 @@ services:
       driver: syslog
       options:
         # Gibt den Pfad zum Unix Socket an, über den die Logs gesendet werden
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         # Fügt ein Tag "cert-bund-data" zu den Logs hinzu, um sie leichter identifizieren zu können
         tag: "cert-bund-data"
     # Bindet ein Host-Verzeichnis (Volume) an einen bestimmten Pfad im Container, um Daten zu speichern und zugänglich zu machen
     volumes:
-    - /docker/greenbone/volumes/cert_data_vol:/mnt
+    - ./volumes/cert_data_vol:/mnt
 
   #################################################################################################################################
   # Definiert den 'dfn-cert-data'-Service. Dieser Container ist verantwortlich für die Verwaltung der Daten von DFN-CERT 
@@ -97,14 +115,14 @@ services:
     # zuzugreifen, die auf dem Hostsystem gespeichert sind.
     volumes:
       # Hier sollten Sie den gewünschten Bindungspfad hinzufügen.
-      - /docker/greenbone/volumes/cert_data_vol:/mnt
+      - ./volumes/cert_data_vol:/mnt
       
     # Konfiguration für das Logging des Dienstes. Alle Logs von diesem 
     # Dienst werden über den syslog-Treiber an den angegebenen Socket gesendet.
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "dfn-cert-data"
   #################################################################################################################################      
   # Definiert den 'data-objects'-Service, der für die Behandlung von Daten-Objekten zuständig ist
@@ -113,14 +131,14 @@ services:
     image: greenbone/data-objects
     # Bindet ein Host-Verzeichnis (Volume) an einen bestimmten Pfad im Container, um Daten zu speichern und zugänglich zu machen
     volumes:
-    - /docker/greenbone/volumes/data_objects_vol:/mnt
+    - ./volumes/data_objects_vol:/mnt
     # Konfiguriert das Logging für diesen Service:
     # Es verwendet den syslog-Treiber und leitet die Logs an den angegebenen Unix Socket weiter
     logging:
       driver: syslog
       options:
         # Gibt den Pfad zum Unix Socket an, über den die Logs gesendet werden
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         # Fügt ein Tag "cert-bund-data" zu den Logs hinzu, um sie leichter identifizieren zu können
         # (Beachten Sie, dass Sie vielleicht den Tag ändern möchten, da er momentan "cert-bund-data" ist)
         tag: "cert-bund-data"
@@ -136,7 +154,7 @@ services:
     # es dem Container, Dateien persistent zu speichern und auf Dateien 
     # zuzugreifen, die auf dem Hostsystem gespeichert sind.
     volumes:
-      - /docker/greenbone/volumes/data_objects_vol:/mnt
+      - ./volumes/data_objects_vol:/mnt
       
     # Definiert die Dienste, von denen dieser Dienst abhängig ist. 
     # In diesem Fall muss der 'data-objects'-Dienst gestartet werden, 
@@ -149,7 +167,7 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "report-formats"
 
   #################################################################################################################################  
@@ -162,14 +180,14 @@ services:
     # es dem Container, Dateien persistent zu speichern und auf Dateien 
     # zuzugreifen, die auf dem Hostsystem gespeichert sind.
     volumes:
-      - /docker/greenbone/volumes/gpg_data_vol:/mnt
+      - ./volumes/gpg_data_vol:/mnt
       
     # Konfiguration für das Logging des Dienstes. Alle Logs von diesem 
     # Dienst werden über den syslog-Treiber an den angegebenen Socket gesendet.
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "gpg-data"
 
   #################################################################################################################################
@@ -188,14 +206,14 @@ services:
     # zuzugreifen, die auf dem Hostsystem gespeichert sind. 
     # Der angegebene Pfad ist typisch für die Platzierung des Redis-Unix-Sockets.
     volumes:
-      - /docker/greenbone/volumes/redis_socket_vol:/run/redis/
+      - ./volumes/redis_socket_vol:/run/redis/
       
     # Konfiguration für das Logging des Dienstes. Alle Logs von diesem 
     # Dienst werden über den syslog-Treiber an den angegebenen Socket gesendet.
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "redis-server"
 
   #################################################################################################################################
@@ -213,17 +231,17 @@ services:
     # zuzugreifen, die auf dem Hostsystem gespeichert sind.
     volumes:
       # Das Volume für die eigentlichen Datenbankdateien.
-      - /docker/greenbone/volumes/psql_data_vol:/var/lib/postgresql
+      - ./volumes/psql_data_vol:/var/lib/postgresql
       
       # Das Volume für den PostgreSQL-Unix-Socket.
-      - /docker/greenbone/volumes/psql_socket_vol:/var/run/postgresql
+      - ./volumes/psql_socket_vol:/var/run/postgresql
       
     # Konfiguration für das Logging des Dienstes. Alle Logs von diesem 
     # Dienst werden über den syslog-Treiber an den angegebenen Socket gesendet.
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "pg-gvm"
 
   #################################################################################################################################        
@@ -239,31 +257,31 @@ services:
     # dem Container den Zugriff auf Daten, die persistent auf dem Host gespeichert sind.
     volumes:
       # Basisdatenspeicher für gvmd.
-      - /docker/greenbone/volumes/gvmd_data_vol:/var/lib/gvm
+      - ./volumes/gvmd_data_vol:/var/lib/gvm
       
       # Speichert SCAP-Daten für den Vulnerability Manager.
-      - /docker/greenbone/volumes/scap_data_vol:/var/lib/gvm/scap-data/
+      - ./volumes/scap_data_vol:/var/lib/gvm/scap-data/
       
       # Speichert CERT-Daten.
-      - /docker/greenbone/volumes/cert_data_vol:/var/lib/gvm/cert-data
+      - ./volumes/cert_data_vol:/var/lib/gvm/cert-data
       
       # Speicherort für Data-Objects.
-      - /docker/greenbone/volumes/data_objects_vol:/var/lib/gvm/data-objects/gvmd
+      - ./volumes/data_objects_vol:/var/lib/gvm/data-objects/gvmd
       
       # Speicherort für Vulnerability-Tests.
-      - /docker/greenbone/volumes/vt_data_vol:/var/lib/openvas/plugins
+      - ./volumes/vt_data_vol:/var/lib/openvas/plugins
       
       # PostgreSQL-Datenbank-Speicherort.
-      - /docker/greenbone/volumes/psql_data_vol:/var/lib/postgresql
+      - ./volumes/psql_data_vol:/var/lib/postgresql
       
       # Unix-Socket-Speicherort für den gvmd-Dienst.
-      - /docker/greenbone/volumes/gvmd_socket_vol:/run/gvmd
+      - ./volumes/gvmd_socket_vol:/run/gvmd
       
       # Unix-Socket-Speicherort für den ospd-openvas-Dienst.
-      - /docker/greenbone/volumes/ospd_openvas_socket_vol:/run/ospd
+      - ./volumes/ospd_openvas_socket_vol:/run/ospd
       
       # Unix-Socket-Speicherort für den PostgreSQL-Dienst.
-      - /docker/greenbone/volumes/psql_socket_vol:/var/run/postgresql
+      - ./volumes/psql_socket_vol:/var/run/postgresql
 
     # Abhängigkeiten und Bedingungen für den Start des Dienstes.
     depends_on:
@@ -284,7 +302,7 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "gvmd"
 
   #################################################################################################################################      
@@ -292,19 +310,20 @@ services:
   gsa:
     # Das zu verwendende Image ist eine stabile Version des Greenbone Security Assistants.
     image: greenbone/gsa:stable
+    hostname: gsa
 
     # Der Container wird automatisch neu gestartet, falls er fehlschlägt.
     restart: on-failure
 
     # Stellt den Webdienst auf Port 9392 des Hosts bereit, welcher intern auf Port 80 des Containers weitergeleitet wird.
-    ports:
-      - 9392:80
+    #ports:
+    #  - 9392:80
 
     # Bindet Speicherorte auf dem Hostsystem an den Container. Diese ermöglichen 
     # dem Container den Zugriff auf Daten und Kommunikation mit anderen Diensten über Unix Sockets.
     volumes:
       # Unix-Socket-Speicherort für die Kommunikation mit dem gvmd-Dienst.
-      - /docker/greenbone/volumes/gvmd_socket_vol:/run/gvmd
+      - ./volumes/gvmd_socket_vol:/run/gvmd
 
     # Abhängigkeiten für den Start des Dienstes.
     depends_on:
@@ -316,8 +335,26 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "gsa"
+
+  #################################################################################################################################      
+  gsa-https-frontend:
+    build:
+      context: ./images/ngnix
+    ports:
+      - "9392:443"
+    depends_on:
+      - gsa
+
+    # Konfiguration für das Logging des Dienstes. Alle Logs von diesem 
+    # Dienst werden über den syslog-Treiber an den angegebenen Socket gesendet.
+    logging:
+       driver: syslog
+       options:
+         syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
+         tag: "ngnix"
+         
 
   #################################################################################################################################
   # Definiert den 'ospd-openvas'-Service, ein Open Vulnerability Assessment Scanner.
@@ -362,15 +399,15 @@ services:
     # Bindet Speicherorte auf dem Hostsystem an den Container. 
     volumes:
       # GPG-Konfiguration und Schlüssel.
-      - /docker/greenbone/volumes/gpg_data_vol:/etc/openvas/gnupg
+      - ./volumes/gpg_data_vol:/etc/openvas/gnupg
       # Ort für die Vulnerability Tests.
-      - /docker/greenbone/volumes/vt_data_vol:/var/lib/openvas/plugins
+      - ./volumes/vt_data_vol:/var/lib/openvas/plugins
       # Ort für Notus-Daten.
-      - /docker/greenbone/volumes/notus_data_vol:/var/lib/notus
+      - ./volumes/notus_data_vol:/var/lib/notus
       # Unix-Socket-Speicherort für die Kommunikation mit anderen Diensten.
-      - /docker/greenbone/volumes/ospd_openvas_socket_vol:/run/ospd
+      - ./volumes/ospd_openvas_socket_vol:/run/ospd
       # Unix-Socket-Speicherort für die Kommunikation mit dem Redis-Server.
-      - /docker/greenbone/volumes/redis_socket_vol:/run/redis/
+      - ./volumes/redis_socket_vol:/run/redis/
 
     # Abhängigkeiten für den Start des Dienstes.
     depends_on:
@@ -385,7 +422,7 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "ospd-openvas"
 
   #################################################################################################################################
@@ -413,7 +450,7 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "mqtt-broker"
   #################################################################################################################################      
   # Definiert den 'notus-scanner'-Service, der für das Scannen von Schwachstellen verantwortlich ist.
@@ -426,8 +463,8 @@ services:
 
     # Volumes für die Daten des Notus-Scanners und die GPG-Konfiguration.
     volumes:
-      - /docker/greenbone/volumes/notus_data_vol:/var/lib/notus
-      - /docker/greenbone/volumes/gpg_data_vol:/etc/openvas/gnupg
+      - ./volumes/notus_data_vol:/var/lib/notus
+      - ./volumes/gpg_data_vol:/etc/openvas/gnupg
 
     # Umgebungsvariablen für den Notus-Scanner.
     environment:
@@ -444,7 +481,7 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "notus-scanner"
   #################################################################################################################################
   # Definiert den 'gvm-tools'-Service, ein Hilfswerkzeug zum Interagieren mit GVM-Diensten.
@@ -454,8 +491,8 @@ services:
 
     # Volumes für die Kommunikation mit gvmd und ospd-openvas.
     volumes:
-      - /docker/greenbone/volumes/gvmd_socket_vol:/run/gvmd
-      - /docker/greenbone/volumes/ospd_openvas_socket_vol:/run/ospd
+      - ./volumes/gvmd_socket_vol:/run/gvmd
+      - ./volumes/ospd_openvas_socket_vol:/run/ospd
 
     # Dienste, von denen die GVM-Tools abhängen.
     depends_on:
@@ -466,5 +503,5 @@ services:
     logging:
       driver: syslog
       options:
-        syslog-address: "unixgram:///docker/greenbone/volumes/syslog_socket_vol/socket"
+        syslog-address: "unixgram://./volumes/syslog_socket_vol/socket"
         tag: "gvm-tools"
